@@ -90,7 +90,8 @@ finish:
 		//0x40200000 - 0x60000000
 		//0x40204000 is mappable
 		//0x40200000 is not mappable (exception vector)
-		if(kaslr_table->pa >= 0x40201000 && kaslr_table->pa < 0x5FD00000 && kaslr_table->magic == 0xD2519E9B){
+		//if ((unsigned)(number-lower) <= (upper-lower))
+		if((unsigned) (kaslr_table->pa - 0x40201000) <= (0x5FD00000 - 0x40201000) && kaslr_table->magic == 0xD2519E9B){
 			int multiplier = (kaslr_table->size)/0x1000;
 			for(lol=0;lol < multiplier; lol++) {
 				taiMemcpyKernelToUser(small, (void*) kaslr_table->va + (0x1000 * lol), 0x1000);
