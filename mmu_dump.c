@@ -29,6 +29,7 @@ static int afe;
 #define LOG_FILE DUMP_PATH "kplugin_log.txt"
 
 static void log_reset();
+static void dump_reset();
 static void log_write(const char *buffer, size_t length);
 
 #define LOG(...) \
@@ -93,6 +94,7 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
     int ur;
     int uw;
     unsigned int paddr;
+    SceUID fd;
 
     if ((entry & 0x3) == 0x1) /* large page */
     {
@@ -103,7 +105,15 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
         ap1 = (entry >> 4) & 3;
         mmu_get_perms(ap2, ap1, &ur, &uw, &pr, &pw);
         paddr = entry & 0xFFFF0000;
-        LOG("-[0x%08X] %s PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+	if( paddr >= 0x40201000 && paddr < 0x5FD00000  ){
+            LOG("-[0x%08X] %s Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+            fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
+            ksceIoWrite(fd, (void*) vaddr, 0x1000);
+            ksceIoClose(fd);
+        }
+        else{
+            LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+        }
     }
     else if ((entry & 0x2)) /* small page */
     {
@@ -114,7 +124,15 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
         ap1 = (entry >> 4) & 3;
         mmu_get_perms(ap2, ap1, &ur, &uw, &pr, &pw);
         paddr = entry & 0xFFFFF000;
-        LOG("-[0x%08X] %s PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+        if( paddr >= 0x40201000 && paddr < 0x5FD00000  ){
+            LOG("-[0x%08X] %s Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+            fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
+            ksceIoWrite(fd, (void*) vaddr, 0x1000);
+            ksceIoClose(fd);
+        }
+        else{
+            LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+        }
     }
     else
     {
@@ -224,6 +242,7 @@ int mmu_dump(void)
 int module_start(SceSize argc, const void *args)
 {
     log_reset();
+    dump_reset();
     unsigned int sctlr;
 
     __asm__("mrc p15,0,%0,c1,c0,0" : "=r" (sctlr));
@@ -241,6 +260,16 @@ int module_stop(SceSize argc, const void *args)
 void log_reset()
 {
 	SceUID fd = ksceIoOpen(LOG_FILE,
+		SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6);
+	if (fd < 0)
+		return;
+
+	ksceIoClose(fd);
+}
+
+void dump_reset()
+{
+	SceUID fd = ksceIoOpen("ux0:dump/memory.bin",
 		SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6);
 	if (fd < 0)
 		return;
