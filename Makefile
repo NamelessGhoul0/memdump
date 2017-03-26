@@ -1,31 +1,31 @@
-TITLE_ID = MEMDMP001
+TITLE_ID = NIDUMP001
 TARGET = mDump
-PSVITAIP = 192.168.1.78
+PSVITAIP = 192.168.1.115
 
-PLUGIN_OBJS = user.o
+PLUGIN_OBJS = mmu_dump.o
 HEADERS = $(wildcard *.h)
 
-PLUGIN_LIBS = -ltaihen_stub -lSceSysclibForDriver_stub -lSceModulemgrForKernel_stub -lSceIofilemgr_stub -lSceLibc_stub -lSceSysmemForDriver_stub -lSceSysmemForKernel_stub -lSceLibKernel_stub
+PLUGIN_LIBS = -ltaihen_stub -lSceSysclibForDriver_stub -lSceModulemgrForKernel_stub -lSceIofilemgrForDriver_stub
 
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
 CFLAGS  = -Wl,-q -Wall -O3
 ASFLAGS = $(CFLAGS)
 
-all: mDump.suprx
+all: kDump.skprx
 
-mDump.suprx: mDump.velf
+kDump.skprx: kDump.velf
 	vita-make-fself $< $@
 
-mDump.velf: mDump.elf
+kDump.velf: kDump.elf
 	vita-elf-create -e exports.yml $< $@
 
-mDump.elf: $(PLUGIN_OBJS)
+kDump.elf: $(PLUGIN_OBJS)
 	$(CC) $(CFLAGS) $^ $(PLUGIN_LIBS) -o $@ -nostdlib
 
 clean:
 	@rm -rf *.velf *.elf *.vpk *.skprx $(MAIN_OBJS) $(PLUGIN_OBJS) param.sfo eboot.bin
 
-send: mDump.suprx
-	curl -T mDump.suprx ftp://$(PSVITAIP):1337/ux0:/dump/
+send: eboot.bin
+	curl -T eboot.bin ftp://$(PSVITAIP):1337/ux0:/app/$(TITLE_ID)/
 	@echo "Sent."
