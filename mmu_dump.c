@@ -124,7 +124,7 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
         ap1 = (entry >> 4) & 3;
         mmu_get_perms(ap2, ap1, &ur, &uw, &pr, &pw);
         paddr = entry & 0xFFFFF000;
-        if( paddr >= 0x40201000 && paddr < 0x5FD00000  ){
+        if( paddr >= 0x40201000 && paddr < 0x5FD00000 && paddr != 0x47D84000 ){
             LOG("-[0x%08X] %s Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
             fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
             ksceIoWrite(fd, (void*) vaddr, 0x1000);
