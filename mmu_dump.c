@@ -260,6 +260,7 @@ int mmu_dump(void)
 
 int module_start(SceSize argc, const void *args)
 {
+    ksceIoMkdir("ux0:dump", 6);
     log_reset();
     dump_reset();
     unsigned int sctlr;
