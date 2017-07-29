@@ -88,8 +88,8 @@ unsigned char magic[0x8] = {
 };
 
 //spoof
-unsigned char testkit_pscode[0x8] = {
-	0x00, 0x01, 0x01, 0x02, 0x00, 0x10, 0x00, 0x03
+unsigned char devkit_pscode[0x8] = {
+	0x00, 0x01, 0x01, 0x01, 0x00, 0x10, 0x00, 0x01
 };
 
 static int mmu_dump_pages(unsigned int vaddr, unsigned int entry)
@@ -137,7 +137,7 @@ static int mmu_dump_pages(unsigned int vaddr, unsigned int entry)
 						LOG("Ps Code Magic: [0x%08X] \n", vaddr + counter);
 						counter = counter + 4;
 						LOG("Ps Code Offset: [0x%08X] \n", vaddr + counter);
-						memcpy((void*) vaddr + counter, testkit_pscode, 8);
+						memcpy((void*) vaddr + counter, devkit_pscode, 8);
 						return 0;
 					}
 				}
@@ -184,7 +184,7 @@ static int mmu_dump_pages(unsigned int vaddr, unsigned int entry)
 						LOG("Ps Code Magic: [0x%08X] \n", vaddr + counter);
 						counter = counter + 4;
 						LOG("Ps Code Offset: [0x%08X] \n", vaddr + counter);
-						memcpy((void*) vaddr + counter, testkit_pscode, 8);
+						memcpy((void*) vaddr + counter, devkit_pscode, 8);
 						return 0;
 					}
 				}
