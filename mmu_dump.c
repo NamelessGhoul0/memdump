@@ -82,7 +82,17 @@ static void mmu_get_perms(int ap2, int ap1, int *ur, int *uw, int *pr, int *pw)
     }
 }
 
-static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
+//magic
+unsigned char magic[0x8] = {
+	0xA5, 0x9D, 0xCE, 0xAB, 0x00, 0x01, 0x01
+};
+
+//spoof
+unsigned char testkit_pscode[0x8] = {
+	0x00, 0x01, 0x01, 0x02, 0x00, 0x10, 0x00, 0x03
+};
+
+static int mmu_dump_pages(unsigned int vaddr, unsigned int entry)
 {
     int xn;
     int ng;
@@ -106,21 +116,35 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
         mmu_get_perms(ap2, ap1, &ur, &uw, &pr, &pw);
         paddr = entry & 0xFFFF0000;
 	if( paddr >= 0x40201000 && paddr < 0x5FD00000 && paddr != 0x44C20000 && paddr != 0x44C30000 && paddr != 0x443C0000){
-		
 		if( (paddr-0x44300000) <= (0x44400000-0x44300000) ){
-				LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+			}else if ( (paddr-0x45020000) <= (0x45030000-0x45020000) ){
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 			}else{
+		
 				LOG("-[0x%08X] %s Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 				
-				fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
-				ksceIoWrite(fd, (void*) vaddr, 0x1000);
-				ksceIoClose(fd);
-			}
-            
-			
-        }
+				
+				
+				
+				//spoofing happens here
+				int counter = 0;
+				for (counter = 0; counter < 0x1000; counter ++){
+					if(memcmp((void*)vaddr + counter, magic, 7) == 0 && counter == 0x5B0){
+						fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
+						ksceIoWrite(fd, (void*) vaddr, 0x1000);
+						ksceIoClose(fd);
+						LOG("Ps Code Magic: [0x%08X] \n", vaddr + counter);
+						counter = counter + 4;
+						LOG("Ps Code Offset: [0x%08X] \n", vaddr + counter);
+						memcpy((void*) vaddr + counter, testkit_pscode, 8);
+						return 0;
+					}
+				}
+            }
+		}
         else{
-            LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+            //LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Lg Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
         }
     }
     else if ((entry & 0x2)) /* small page */
@@ -135,31 +159,50 @@ static void mmu_dump_pages(unsigned int vaddr, unsigned int entry)
 		//0x4434C000
         if( paddr >= 0x40201000 && paddr < 0x5FD00000){
 			if( (paddr-0x47D80000) <= (0x47D90000-0x47D80000) ){
-				LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 			}else if ( (paddr-0x44C09000) <= (0x44C1A000-0x44C09000) ){
-				LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 			}else if ( (paddr-0x44300000) <= (0x44400000-0x44300000) ){
-				LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+			}else if ( (paddr-0x45009000) <= (0x45019000-0x45009000) ){
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+			}else if ( (paddr-0x44700000) <= (0x44710000-0x44700000) ){
+				//LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 			}else{
 				LOG("-[0x%08X] %s Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
 				
-				fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
-				ksceIoWrite(fd, (void*) vaddr, 0x1000);
-				ksceIoClose(fd);
 				
-            }
+				
+				
+				//spoofing also happens here
+				int counter = 0;
+				for (counter = 0; counter < 0x1000; counter ++){
+					if(memcmp((void*)vaddr + counter, magic, 7) == 0 && counter  == 0x5B0){
+						fd = ksceIoOpen("ux0:dump/memory.bin",SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6);
+						ksceIoWrite(fd, (void*) vaddr, 0x1000);
+						ksceIoClose(fd);
+						LOG("Ps Code Magic: [0x%08X] \n", vaddr + counter);
+						counter = counter + 4;
+						LOG("Ps Code Offset: [0x%08X] \n", vaddr + counter);
+						memcpy((void*) vaddr + counter, testkit_pscode, 8);
+						return 0;
+					}
+				}
+			}
+            
         }
         else{
-            LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
+            //LOG("-[0x%08X] %s Not Dumpable PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d\n", vaddr, "Sm Page  ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn);
         }
     }
     else
     {
-        LOG("-[0x%08X] %s\n", vaddr, "Unmapped ");
+        //LOG("-[0x%08X] %s\n", vaddr, "Unmapped ");
     }
+	return 1;
 }
 
-static void mmu_dump_sections(unsigned int vaddr, unsigned int entry)
+static int mmu_dump_sections(unsigned int vaddr, unsigned int entry)
 {
     int ns;
     int ss;
@@ -191,7 +234,7 @@ static void mmu_dump_sections(unsigned int vaddr, unsigned int entry)
         mmu_get_perms(ap2, ap1, &ur, &uw, &pr, &pw);
         paddr = ss ? entry & 0xFF000000 : entry & 0xFFF00000;
 
-        LOG("[0x%08X] %s PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d NS:%d DOM:%02X\n", vaddr, ss ? "S-Section " : "Section   ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn, !!ns, domain);
+        //LOG("[0x%08X] %s PA:0x%08X NG:%d SH:%d UR:%d UW:%d PR:%d PW:%d XN:%d NS:%d DOM:%02X\n", vaddr, ss ? "S-Section " : "Section   ", paddr, !!ng, !!s, !!ur, !!uw, !!pr, !!pw, !!xn, !!ns, domain);
     }
     else if ((entry & 0x3) == 1) /* page table */
     {
@@ -199,20 +242,24 @@ static void mmu_dump_sections(unsigned int vaddr, unsigned int entry)
         ns = entry & 8;
         paddr = entry & 0xFFFFFC00;
         tbl = (unsigned int *)pa2va(paddr);
-        LOG("[0x%08X] %s PA:0x%08X VA:0x%08X NS:%d DOM:%02X\n", vaddr, "Page TBL  ", paddr, tbl, !!ns, domain);
+        //LOG("[0x%08X] %s PA:0x%08X VA:0x%08X NS:%d DOM:%02X\n", vaddr, "Page TBL  ", paddr, tbl, !!ns, domain);
         for (i = 0; i < 0x100; i++)
         {
-            mmu_dump_pages(vaddr+(i<<12), tbl[i]);
+            int ret = mmu_dump_pages(vaddr+(i<<12), tbl[i]);
+			if (ret == 0) {
+				return 0;
+			}
         }
     }
     else if ((entry & 0x3) == 0) /* not mapped */
     {
-        LOG("[0x%08X] %s\n", vaddr, "Unmapped  ");
+        //LOG("[0x%08X] %s\n", vaddr, "Unmapped  ");
     }
     else
     {
-        LOG("[0x%08X] %s\n", vaddr, "Invalid   ");
+        //LOG("[0x%08X] %s\n", vaddr, "Invalid   ");
     }
+	return 1;
 }
 
 int mmu_dump(void)
@@ -225,10 +272,12 @@ int mmu_dump(void)
     unsigned int *ttb_vaddr[2];
     unsigned int entry;
 
+	int ret;
+	
     __asm__("mrc p15,0,%0,c2,c0,0" : "=r" (ttbr[0]));
     __asm__("mrc p15,0,%0,c2,c0,1" : "=r" (ttbr[1]));
     __asm__("mrc p15,0,%0,c2,c0,2" : "=r" (ttbcr));
-    LOG("TTBR0: 0x%08X, TTBR1: 0x%08X, TTBCR: 0x%08X\n", ttbr[0], ttbr[1], ttbcr);
+    //LOG("TTBR0: 0x%08X, TTBR1: 0x%08X, TTBCR: 0x%08X\n", ttbr[0], ttbr[1], ttbcr);
 
     n = ttbcr & 0x7;
     ttbr[0] &= (unsigned int)((int)0x80000000 >> (31 - 14 + 1 - n));
@@ -236,14 +285,17 @@ int mmu_dump(void)
 
     ttb_vaddr[0] = (unsigned int *)pa2va(ttbr[0]);
     ttb_vaddr[1] = (unsigned int *)pa2va(ttbr[1]);
-    LOG("TBBR0 (physical): 0x%08X, (virtual): 0x%08X\n", ttbr[0], i<<12);
-    LOG("TBBR1 (physical): 0x%08X, (virtual): 0x%08X\n", ttbr[1], i<<12);
+    //LOG("TBBR0 (physical): 0x%08X, (virtual): 0x%08X\n", ttbr[0], i<<12);
+    //LOG("TBBR1 (physical): 0x%08X, (virtual): 0x%08X\n", ttbr[1], i<<12);
 
     LOG("Dumping TTBR0...\n");
     for (i = 0; i < (1 << 12 - n); i++)
     {
         entry = ttb_vaddr[0][i];
-        mmu_dump_sections(i<<20, entry);
+        int ret = mmu_dump_sections(i<<20, entry);
+		if(ret == 0){
+			return 0;
+		}
     }
 
     if (n)
@@ -252,10 +304,13 @@ int mmu_dump(void)
         for (i = ((~0xEFFF & 0xFFFF) >> n); i < 0x1000; i++)
         {
             entry = ttb_vaddr[1][i];
-            mmu_dump_sections(i<<20, entry);
+            int ret = mmu_dump_sections(i<<20, entry);
+			if(ret == 0){
+				return 0;
+			}
         }
     }
-    return 0;
+    return 1;
 }
 
 int module_start(SceSize argc, const void *args)
